@@ -8,10 +8,8 @@ import (
 	"strings"
 )
 
-var sites = []string{"https://go.dev", "https://golang.org/"}
-
 func main() {
-	docs := scanTargetSites()
+	docs := scanSites("https://go.dev", "https://golang.org/")
 	results := engine.Search(docs)
 
 	if len(results) > 0 {
@@ -20,14 +18,13 @@ func main() {
 	}
 }
 
-func scanTargetSites() []crawler.Document {
+func scanSites(sites ...string) []crawler.Document {
 	var allDocs []crawler.Document
 	scanner := spider.New()
 
 	for _, site := range sites {
 		fmt.Println("Сканирование сайта: ", site)
 		docs, err := scanner.Scan(site, 2)
-
 		if err != nil {
 			fmt.Println("ошибка при добавлении сканировании документов:", err)
 		}
