@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"home-task5/pkg/crawler"
 	"io"
-	"log"
 	"os"
 )
 
@@ -64,7 +63,7 @@ func (st *Storage) ReadDocs() []crawler.Document  {
 func openStorage() *os.File {
 	file, err := os.Open(FileName)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Сбой при открытии файла: %s", err)
 	}
 
 	return file
