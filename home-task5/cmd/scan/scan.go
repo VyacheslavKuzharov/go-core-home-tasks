@@ -6,25 +6,67 @@ import (
 	"home-task5/pkg/crawler"
 	"home-task5/pkg/crawler/spider"
 	"home-task5/pkg/index"
+	"home-task5/pkg/storage"
+	"home-task5/pkg/utils"
 	"sort"
 	"strings"
 )
 
-type parsing struct {
+type parser struct {
 	sites []string
 	scanner *spider.Service
-	ind *index.Index
+	index *index.Index
+	storage *storage.Storage
 }
 
-func new() *parsing {
-	return &parsing{
-		sites: []string{"https://go.dev"},
-		scanner: spider.New(),
-		ind: index.New(),
+func main() {
+	var query string
+
+	flag.StringVar(&query, "s", "golang", "You know... for search.")
+	flag.Parse()
+
+	server := new()
+	docs := server.FetchDocs()
+	server.index.Add(&docs)
+
+	if utils.FlagPresent("s") {
+		ids := server.index.Search(query)
+
+		if len(ids) > 0 {
+			urls := utils.TargetUrls(&docs, ids)
+
+			fmt.Println("Результаты поиска: ")
+			fmt.Println(strings.Join(urls, "\n"))
+		} else {
+			fmt.Printf("Строка: %v не найдена.", query)
+		}
 	}
 }
 
-func (p *parsing) scanSites() []crawler.Document {
+func new() *parser {
+	return &parser{
+		sites: []string{"https://go.dev", "https://golang.org/"},
+		scanner: spider.New(),
+		index: index.New(),
+		storage: storage.New(),
+	}
+}
+
+func (p *parser) FetchDocs() []crawler.Document {
+	var docs []crawler.Document
+
+	if storage.FileExists() {
+		return p.storage.ReadDocs()
+	}
+
+	docs = p.scanSites()
+	p.storage.NewFile()
+	p.storage.StoreDocs(&docs)
+
+	return docs
+}
+
+func (p *parser) scanSites() []crawler.Document {
 	var allDocs []crawler.Document
 
 	for _, site := range p.sites {
@@ -44,53 +86,4 @@ func (p *parsing) scanSites() []crawler.Document {
 
 	fmt.Println("Сканирование завершено")
 	return allDocs
-}
-
-func (p *parsing) indexing(docs []crawler.Document)  {
-	p.ind.Add(docs)
-}
-
-func main() {
-	var query string
-	flag.StringVar(&query, "s", "golang", "You know... for search.")
-	flag.Parse()
-
-	server := new()
-	docs := server.scanSites()
-	server.indexing(docs)
-
-	if flagPresent("s") {
-		ids := server.ind.Search(query)
-
-		if len(ids) > 0 {
-			urls := targetUrls(docs, ids)
-
-			fmt.Println("Результаты поиска: ")
-			fmt.Println(strings.Join(urls, "\n"))
-		} else {
-			fmt.Printf("Строка: %v не найдена.", query)
-		}
-	}
-}
-func targetUrls(docs []crawler.Document, ids []int) []string {
-	var result []string
-
-	for _, id := range ids {
-		i := sort.Search(len(docs), func(i int) bool { return docs[i].ID >= id })
-
-		if docs[i].ID == id {
-			result = append(result, docs[i].URL)
-		}
-	}
-	return result
-}
-
-func flagPresent(name string) bool {
-	found := false
-	flag.Visit(func(f *flag.Flag) {
-		if f.Name == name {
-			found = true
-		}
-	})
-	return found
 }

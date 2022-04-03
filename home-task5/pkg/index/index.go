@@ -15,8 +15,8 @@ func New() *Index {
 	return &index
 }
 
-func (index *Index) Add(docs []crawler.Document)  {
-	for _, doc := range docs {
+func (index *Index) Add(docs *[]crawler.Document)  {
+	for _, doc := range *docs {
 		for _, key := range keys(doc.Title) {
 			if !exists(index.data[key], doc.ID) {
 				index.data[key] = append(index.data[key], doc.ID)
