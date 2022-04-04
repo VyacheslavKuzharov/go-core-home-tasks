@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"home-task5/pkg/crawler"
 	"io"
 	"os"
@@ -12,64 +11,75 @@ import (
 
 const FileName = "sites-data.json"
 
-type Storage struct {
-	file *os.File
-}
+type Storage struct {}
 
 func New() *Storage {
 	return &Storage{}
 }
 
-func (st *Storage) NewFile() *os.File {
+func (st *Storage) NewFile() (*os.File, error) {
 	newFile, err := os.Create(FileName)
 	if err != nil {
-		fmt.Printf("Сбой создания файла: %s", err)
+		return nil, err
 	}
 
-	st.file = newFile
-	return st.file
+	return newFile, nil
 }
 
-func (st *Storage) StoreDocs(docs *[]crawler.Document )  {
+func (st *Storage) StoreDocs(file *os.File, docs *[]crawler.Document ) error {
 	data, err := json.MarshalIndent(*docs, "", " ")
 	if err != nil {
-		fmt.Printf("Сбой маршалинга JSON: %s", err)
+		return err
 	}
 
-	saveToStorage(st.file, data)
-	closeStorage(st.file)
+	err = saveToStorage(file, data)
+	if err != nil {
+		return err
+	}
+
+	err = closeStorage(file)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (st *Storage) ReadDocs() []crawler.Document  {
+func (st *Storage) ReadDocs() ([]crawler.Document, error)  {
 	var docs []crawler.Document
 
-	reader := openStorage()
+	reader, err := openStorage()
+	if err != nil {
+		return nil, err
+	}
+
 	b, err := readStorage(reader)
 	if err != nil {
-		fmt.Printf("Сбой чтения из хранилища: %s", err)
+		return nil, err
 	}
 
 	err = json.Unmarshal(b, &docs)
 	if err != nil {
-		fmt.Printf("Сбой демаршалинга JSON: %s", err)
+		return nil, err
 	}
 
-	closeStorage(reader)
+	err = closeStorage(reader)
+	if err != nil {
+		return nil, err
+	}
 
-	return docs
+	return docs, nil
 }
 
-// сейчас хранилище это json файл
-func openStorage() *os.File {
+func openStorage() (*os.File, error) {
 	file, err := os.Open(FileName)
 	if err != nil {
-		fmt.Printf("Сбой при открытии файла: %s", err)
+		return nil, err
 	}
 
-	return file
+	return file, nil
 }
 
-// сейчас хранилище это json файл
 func readStorage(r io.Reader) ([]byte, error) {
 	var b []byte
 
@@ -84,18 +94,14 @@ func readStorage(r io.Reader) ([]byte, error) {
 	return b, nil
 }
 
-func saveToStorage(w io.Writer, data []byte)  {
+func saveToStorage(w io.Writer, data []byte) error {
 	_, err := w.Write(data)
-	if err != nil {
-		fmt.Printf("Сбой записи в хранилище: %s", err)
-	}
+	return err
 }
 
-func closeStorage(c io.Closer) {
+func closeStorage(c io.Closer) error {
 	err := c.Close()
-	if err != nil {
-		fmt.Printf("Сбой при закрытии хранилища: %s", err)
-	}
+	return err
 }
 
 func FileExists() bool {

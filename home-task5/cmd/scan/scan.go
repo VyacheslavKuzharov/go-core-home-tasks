@@ -8,6 +8,7 @@ import (
 	"home-task5/pkg/index"
 	"home-task5/pkg/storage"
 	"home-task5/pkg/utils"
+	"log"
 	"sort"
 	"strings"
 )
@@ -26,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	server := new()
-	docs := server.FetchDocs()
+	docs := server.fetchDocs()
 	server.index.Add(&docs)
 
 	if utils.FlagPresent("s") {
@@ -52,16 +53,28 @@ func new() *parser {
 	}
 }
 
-func (p *parser) FetchDocs() []crawler.Document {
+func (p *parser) fetchDocs() []crawler.Document {
 	var docs []crawler.Document
 
 	if storage.FileExists() {
-		return p.storage.ReadDocs()
+		d, err := p.storage.ReadDocs()
+		if err != nil {
+			log.Fatalf("Сбой чтения файла: %s", err)
+		}
+
+		return d
 	}
 
 	docs = p.scanSites()
-	p.storage.NewFile()
-	p.storage.StoreDocs(&docs)
+	file, err := p.storage.NewFile()
+	if err != nil {
+		log.Fatalf("Сбой создания файла: %s", err)
+	}
+
+	err = p.storage.StoreDocs(file, &docs)
+	if err != nil {
+		log.Fatalf("Сбой записи: %s", err)
+	}
 
 	return docs
 }
