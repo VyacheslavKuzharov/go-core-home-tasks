@@ -27,7 +27,11 @@ func main() {
 	flag.Parse()
 
 	server := new()
-	docs := server.fetchDocs()
+	docs, err := server.fetchDocs()
+	if err != nil {
+		log.Fatalf("Сбой получения документов(fetchDocs): %s", err)
+	}
+
 	server.index.Add(&docs)
 
 	if utils.FlagPresent("s") {
@@ -53,30 +57,32 @@ func new() *parser {
 	}
 }
 
-func (p *parser) fetchDocs() []crawler.Document {
+func (p *parser) fetchDocs() ([]crawler.Document, error) {
 	var docs []crawler.Document
 
 	if storage.FileExists() {
 		d, err := p.storage.ReadDocs()
 		if err != nil {
-			log.Fatalf("Сбой чтения файла: %s", err)
+			return nil, fmt.Errorf("ReadDocs: %w", err)
 		}
 
-		return d
+		return d, nil
 	}
 
 	docs = p.scanSites()
 	file, err := p.storage.NewFile()
 	if err != nil {
-		log.Fatalf("Сбой создания файла: %s", err)
+		return nil, err
+		//log.Fatalf("Сбой создания файла: %s", err)
 	}
 
 	err = p.storage.StoreDocs(file, &docs)
 	if err != nil {
-		log.Fatalf("Сбой записи: %s", err)
+		return nil, err
+		//log.Fatalf("Сбой записи: %s", err)
 	}
 
-	return docs
+	return docs, nil
 }
 
 func (p *parser) scanSites() []crawler.Document {

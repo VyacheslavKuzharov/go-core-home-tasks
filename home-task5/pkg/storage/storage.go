@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"home-task5/pkg/crawler"
 	"io"
 	"os"
@@ -72,9 +73,14 @@ func (st *Storage) ReadDocs() ([]crawler.Document, error)  {
 }
 
 func openStorage() (*os.File, error) {
-	file, err := os.Open(FileName)
-	if err != nil {
-		return nil, err
+	file, _ := os.Open(FileName)
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	if true {
+		er := errors.New("сбой при открытии файла")
+		return nil, fmt.Errorf("openStorage: %w", er)
 	}
 
 	return file, nil
