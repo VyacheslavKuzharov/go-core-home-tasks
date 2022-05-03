@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"home-task11/pkg/crawler"
 	"home-task11/pkg/crawler/spider"
 	"home-task11/pkg/index"
 	"home-task11/pkg/utils"
+	"log"
+	"net"
+	"os"
 	"sort"
 	"strings"
 )
@@ -16,8 +20,23 @@ type parser struct {
 	index   *index.Index
 }
 
-func main() {
-	var query = "language"
+func handler(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	buf := make([]byte, 1024)
+	log.Println("buf1 -->", buf)
+
+	n, err := reader.Read(buf)
+
+	query := string(buf[:n])
+
+	if err != nil {
+		println("Write to server failed:", err.Error())
+		os.Exit(1)
+	}
+
+	log.Println("msg -->", query)
 
 	server := new()
 	docs := server.fetchDocs()
@@ -28,10 +47,32 @@ func main() {
 	if len(ids) > 0 {
 		urls := utils.TargetUrls(&docs, ids)
 
-		fmt.Println("Результаты поиска: ")
-		fmt.Println(strings.Join(urls, "\n"))
+		//fmt.Println("Результаты поиска: ")
+		//fmt.Println(strings.Join(urls, "\n"))
+		str := strings.Join(urls, "\n")
+
+		_, err = conn.Write([]byte(str))
+		if err != nil {
+			return
+		}
 	} else {
 		fmt.Printf("Строка: %v не найдена.", query)
+	}
+}
+
+func main() {
+	listener, err := net.Listen("tcp4", ":8000")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Запуск сервера на 0.0.0.0:8000 ")
+	// цикл обработки клиентских подключений
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			log.Fatal(err)
+		}
+		go handler(conn)
 	}
 }
 
